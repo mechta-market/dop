@@ -62,8 +62,9 @@ func (o *St) Fatalf(tmpl string, args ...any) {
 }
 
 func (o *St) Fatalw(msg string, err any, args ...any) {
-	args = append(args, "error", err)
-	o.sl.Fatalw(msg, args...)
+	o.sl.Desugar().
+		With(zap.Any("error", err)).Sugar().
+		Fatalw(msg, args...)
 }
 
 func (o *St) Error(args ...any) {
@@ -75,8 +76,9 @@ func (o *St) Errorf(tmpl string, args ...any) {
 }
 
 func (o *St) Errorw(msg string, err any, args ...any) {
-	args = append(args, "error", err)
-	o.sl.Errorw(msg, args...)
+	o.sl.Desugar().
+		With(zap.Any("error", err)).Sugar().
+		Errorw(msg, args...)
 }
 
 func (o *St) Warn(args ...any) {
