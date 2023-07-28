@@ -47,10 +47,10 @@ func (s *St) Wait() <-chan error {
 	return s.eChan
 }
 
-func (s *St) Shutdown() bool {
+func (s *St) Shutdown() error {
 	defer close(s.eChan)
 
 	s.Server.GracefulStop()
 
-	return true
+	return nil
 }
