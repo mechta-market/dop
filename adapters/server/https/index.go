@@ -22,16 +22,13 @@ const (
 )
 
 type St struct {
-	lg logger.Lite
-
 	addr   string
 	server *http.Server
 	eChan  chan error
 }
 
-func Start(addr string, handler http.Handler, lg logger.Lite) *St {
-	s := &St{
-		lg:   lg,
+func New(addr string, handler http.Handler) *St {
+	return &St{
 		addr: addr,
 		server: &http.Server{
 			Addr:              addr,
@@ -42,25 +39,24 @@ func Start(addr string, handler http.Handler, lg logger.Lite) *St {
 		},
 		eChan: make(chan error, 1),
 	}
+}
 
-	s.lg.Infow("Start rest-api", "addr", s.server.Addr)
-
+func (s *St) Start() (string, error) {
 	go func() {
 		err := s.server.ListenAndServe()
 		if err != nil && err != http.ErrServerClosed {
-			s.lg.Errorw("Http server closed", err)
 			s.eChan <- err
 		}
 	}()
 
-	return s
+	return s.server.Addr, nil
 }
 
 func (s *St) Wait() <-chan error {
 	return s.eChan
 }
 
-func (s *St) Shutdown(timeout time.Duration) bool {
+func (s *St) Shutdown(timeout time.Duration) error {
 	defer close(s.eChan)
 
 	ctx, ctxCancel := context.WithTimeout(context.Background(), timeout)
@@ -68,11 +64,10 @@ func (s *St) Shutdown(timeout time.Duration) bool {
 
 	err := s.server.Shutdown(ctx)
 	if err != nil {
-		s.lg.Errorw("Fail to shutdown http-api", err, "addr", s.addr)
-		return false
+		return err
 	}
 
-	return true
+	return nil
 }
 
 func Error(c *gin.Context, err error) bool {
@@ -140,10 +135,7 @@ func MwRecovery(lg logger.WarnAndError, handler func(*gin.Context, error)) gin.H
 					err = gErr.Err
 				}
 			} else if recoverRep := recover(); recoverRep != nil { // recovery error
-				var ok bool
-				if err, ok = recoverRep.(error); !ok {
-					err = errors.New(fmt.Sprint(recoverRep))
-				}
+				err = fmt.Errorf("%v", recoverRep)
 			}
 
 			if err == nil {
@@ -155,23 +147,25 @@ func MwRecovery(lg logger.WarnAndError, handler func(*gin.Context, error)) gin.H
 				return
 			}
 
-			switch cErr := err.(type) {
-			case dopErrs.Err:
+			var cErr dopErrs.Err
+			var cErrWithDesc dopErrs.ErrWithDesc
+			var cErrForm dopErrs.FormErr
+
+			switch {
+			case errors.As(err, &cErr):
 				c.AbortWithStatusJSON(http.StatusBadRequest, dopTypes.ErrRep{
 					ErrorCode: cErr.Error(),
 				})
-			case dopErrs.ErrWithDesc:
+			case errors.As(err, &cErrWithDesc):
 				c.AbortWithStatusJSON(http.StatusBadRequest, dopTypes.ErrRep{
-					ErrorCode: cErr.Err.Error(),
-					Desc:      cErr.Desc,
+					ErrorCode: cErrWithDesc.Err.Error(),
+					Desc:      cErrWithDesc.Desc,
 				})
-			case dopErrs.FormErr:
-				fields := map[string]string{}
-
-				for k, v := range cErr.Fields {
+			case errors.As(err, &cErrForm):
+				fields := make(map[string]string, len(cErrForm.Fields))
+				for k, v := range cErrForm.Fields {
 					fields[k] = v.Error()
 				}
-
 				c.AbortWithStatusJSON(http.StatusBadRequest, dopTypes.ErrRep{
 					ErrorCode: dopErrs.FormValidate.Error(),
 					Fields:    fields,

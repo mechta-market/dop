@@ -66,7 +66,9 @@ func TestHttpc(t *testing.T) {
 		c.Status(200)
 	})
 
-	server := https.Start(":"+ServerPort, r, app.lg)
+	server := https.New(":"+ServerPort, r)
+	_, err := server.Start()
+	require.Nil(t, err)
 
 	// client
 
@@ -221,7 +223,6 @@ func TestHttpc(t *testing.T) {
 		},
 	}
 
-	var err error
 	var resp *httpc.RespSt
 
 	for cI, c := range cases {
@@ -283,5 +284,5 @@ func TestHttpc(t *testing.T) {
 		})
 	}
 
-	require.True(t, server.Shutdown(2*time.Second))
+	require.Nil(t, server.Shutdown(2*time.Second))
 }
