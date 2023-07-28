@@ -8,15 +8,15 @@ import (
 	"google.golang.org/grpc"
 )
 
-type Server struct {
+type St struct {
 	lg logger.Lite
 
 	Server *grpc.Server
 	eChan  chan error
 }
 
-func New(lg logger.Lite, opts ...grpc.ServerOption) *Server {
-	return &Server{
+func New(lg logger.Lite, opts ...grpc.ServerOption) *St {
+	return &St{
 		lg: lg,
 
 		Server: grpc.NewServer(opts...),
@@ -24,7 +24,7 @@ func New(lg logger.Lite, opts ...grpc.ServerOption) *Server {
 	}
 }
 
-func (s *Server) Start(port string) error {
+func (s *St) Start(port string) error {
 	lis, err := net.Listen("tcp", ":"+port)
 	if err != nil {
 		return fmt.Errorf("fail to listen: %w", err)
@@ -43,11 +43,11 @@ func (s *Server) Start(port string) error {
 	return nil
 }
 
-func (s *Server) Wait() <-chan error {
+func (s *St) Wait() <-chan error {
 	return s.eChan
 }
 
-func (s *Server) Shutdown() bool {
+func (s *St) Shutdown() bool {
 	defer close(s.eChan)
 
 	s.Server.GracefulStop()
