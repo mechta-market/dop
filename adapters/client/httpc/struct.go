@@ -194,12 +194,12 @@ func (o *RespSt) LogInfo(title string, args ...any) {
 
 func (o *RespSt) fillLogArgs(srcArgs ...any) []any {
 	reqBody := string(o.ReqOpts.ReqBody)
-	if len(reqBody) > 500 {
-		reqBody = reqBody[:500] + "..."
+	if len(reqBody) > 2000 {
+		reqBody = reqBody[:2000] + "..."
 	}
 	repBody := string(o.BodyRaw)
-	if len(repBody) > 500 {
-		repBody = repBody[:500] + "..."
+	if len(repBody) > 2000 {
+		repBody = repBody[:2000] + "..."
 	}
 	return append(
 		srcArgs,
