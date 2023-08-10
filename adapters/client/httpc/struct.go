@@ -182,7 +182,7 @@ func (o *RespSt) Reset() {
 
 func (o *RespSt) LogError(title string, err error, args ...any) {
 	if o.ReqOpts.HasLogFlag(ErrorLogToInfo) {
-		o.LogInfo(title, append(args, "error", err.Error())...)
+		o.LogInfo(title, append(args, "error", err)...)
 	} else {
 		o.Lg.Errorw(o.ReqOpts.LogPrefix+title, err, o.fillLogArgs(args...)...)
 	}
